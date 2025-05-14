@@ -1,45 +1,37 @@
 {
   "project_info": {
-    "project_number": "119153274000",
-    "project_id": "connect-app-amitsing",
-    "storage_bucket": "connect-app-amitsing.firebasestorage.app"
+    "project_number": "1089526595697",
+    "project_id": "connect-735d9",
+    "storage_bucket": "connect-735d9.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:119153274000:android:e8fdef627cc914a8597c15",
+        "mobilesdk_app_id": "1:1089526595697:android:6c2edd0b9f37abf75e9bd0",
         "android_client_info": {
           "package_name": "com.example.connectapp"
         }
       },
       "oauth_client": [
         {
-          "client_id": "119153274000-i1ejhlqutrppp1qs2egf5682uf419t2u.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.connectapp",
-            "certificate_hash": "be705293ed5f4fad6a6096b037aca3483a901d7d"
-          }
-        },
-        {
-          "client_id": "119153274000-4gt56i6p03t9m2hgbu9fl1ejcnn56iiv.apps.googleusercontent.com",
+          "client_id": "1089526595697-6c6hdsuttgtju3bkukd8iqgcce4v8ars.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyDpCN_v9Yop0GmSSiERCgq5uXs0nmoQQ0c"
+          "current_key": "AIzaSyBG5cmkgbvrRAnow8KlvGGzLYBgRwVPG3Y"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "119153274000-4gt56i6p03t9m2hgbu9fl1ejcnn56iiv.apps.googleusercontent.com",
+              "client_id": "1089526595697-6c6hdsuttgtju3bkukd8iqgcce4v8ars.apps.googleusercontent.com",
               "client_type": 3
             },
             {
-              "client_id": "119153274000-i1h5pgtrb2bifkrnthq9vqgc1qlauutr.apps.googleusercontent.com",
+              "client_id": "1089526595697-52ijfogvansjbinubk8mtbgfggl8dbbt.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
                 "bundle_id": "com.example.connectapp"
