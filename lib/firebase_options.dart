@@ -47,28 +47,30 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyC3TZmDhXfcu6TP3uu2GhI5FZ551WrnGFA',
-    appId: '1:119153274000:web:c2317da0c151edcf597c15',
-    messagingSenderId: '119153274000',
-    projectId: 'connect-app-amitsing',
-    authDomain: 'connect-app-amitsing.firebaseapp.com',
-    storageBucket: 'connect-app-amitsing.firebasestorage.app',
+    apiKey: 'AIzaSyD1d8eY381vrMBYAvkrshow-hDA2WCcaZc',
+    appId: '1:1089526595697:web:fd7f17a7bad29af05e9bd0',
+    messagingSenderId: '1089526595697',
+    projectId: 'connect-735d9',
+    authDomain: 'connect-735d9.firebaseapp.com',
+    storageBucket: 'connect-735d9.firebasestorage.app',
+    measurementId: 'G-0JL4RJM2JK',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDpCN_v9Yop0GmSSiERCgq5uXs0nmoQQ0c',
-    appId: '1:119153274000:android:e8fdef627cc914a8597c15',
-    messagingSenderId: '119153274000',
-    projectId: 'connect-app-amitsing',
-    storageBucket: 'connect-app-amitsing.firebasestorage.app',
+    apiKey: 'AIzaSyBG5cmkgbvrRAnow8KlvGGzLYBgRwVPG3Y',
+    appId: '1:1089526595697:android:6c2edd0b9f37abf75e9bd0',
+    messagingSenderId: '1089526595697',
+    projectId: 'connect-735d9',
+    storageBucket: 'connect-735d9.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAfQCctXaGhcAEHgSX5ZNacd71hH3Raskc',
-    appId: '1:119153274000:ios:231edf711561eba0597c15',
-    messagingSenderId: '119153274000',
-    projectId: 'connect-app-amitsing',
-    storageBucket: 'connect-app-amitsing.firebasestorage.app',
+    apiKey: 'AIzaSyD6KMH5Bhf83LOuwAxjmfXBOgNfIaYTyI8',
+    appId: '1:1089526595697:ios:272e829ebbac89cb5e9bd0',
+    messagingSenderId: '1089526595697',
+    projectId: 'connect-735d9',
+    storageBucket: 'connect-735d9.firebasestorage.app',
     iosBundleId: 'com.example.connectapp',
   );
+
 }
