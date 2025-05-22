@@ -1,3 +1,4 @@
+import 'package:connectapp/screens/events/presentation/pages/manage_event_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -478,7 +479,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
               minimumSize: const Size(double.infinity, 48),
             ),
             onPressed: () {
-              // TODO: Add event management navigation
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ManageEventScreen(event: widget.event),
+                ),
+              );
             },
           );
         }

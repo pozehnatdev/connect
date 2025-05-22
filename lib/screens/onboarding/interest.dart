@@ -136,7 +136,7 @@ class _Onboard_screen5State extends State<Onboard_screen5> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Notification banner
-            Container(
+            /*Container(
               width: double.infinity,
               padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               color: Colors.grey[100],
@@ -161,7 +161,7 @@ class _Onboard_screen5State extends State<Onboard_screen5> {
                   ),
                 ],
               ),
-            ),
+            ),*/
             Divider(height: 1, thickness: 1, color: borderGrey),
 
             // Skill input field

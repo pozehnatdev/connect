@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:connectapp/model/event/event_model.dart';
@@ -54,7 +56,7 @@ class EventsListScreen extends StatelessWidget {
           ),
         );
       }
-
+      state.events.removeWhere((event) => event.date.isBefore(DateTime.now()));
       return ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: state.events.length,
@@ -260,7 +262,28 @@ class EventCard extends StatelessWidget {
                           ),
                         ),
                       )
-                    else if (event.attendees.isNotEmpty)
+                    else if (event.attendees
+                            .contains(FirebaseAuth.instance.currentUser?.uid) &&
+                        event.hostId != FirebaseAuth.instance.currentUser?.uid)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.green),
+                        ),
+                        child: const Text(
+                          'ATTENDING',
+                          style: TextStyle(
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    else if (event.attendees.isNotEmpty &&
+                        event.hostId != FirebaseAuth.instance.currentUser?.uid)
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 4),
@@ -278,7 +301,8 @@ class EventCard extends StatelessWidget {
                           ),
                         ),
                       )
-                    else
+                    else if (event.hostId !=
+                        FirebaseAuth.instance.currentUser?.uid)
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 4),

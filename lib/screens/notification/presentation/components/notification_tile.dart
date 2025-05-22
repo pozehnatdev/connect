@@ -25,6 +25,14 @@ class NotificationTile extends StatefulWidget {
 class _NotificationTileState extends State<NotificationTile> {
   bool isTtsPlaying = false;
   bool _isProcessing = false;
+  bool _locallyAccepted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // If the notification is already accepted, reflect that in our local state
+    _locallyAccepted = widget.notification.isAccepted;
+  }
 
   String _getNotificationTitle() {
     switch (widget.notification.type) {
@@ -62,89 +70,82 @@ class _NotificationTileState extends State<NotificationTile> {
     });
 
     try {
+      // Immediately update the UI
+      setState(() {
+        _locallyAccepted = true;
+        _isProcessing = false;
+      });
+
       final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-      if (currentUserId == null) {
+      if (currentUserId == null || currentUserId.isEmpty) {
         throw Exception('No authenticated user found');
       }
 
-      // 1. Update the notification status to accepted
-      await FirebaseFirestore.instance
-          .collection('notifications')
-          .where('id', isEqualTo: widget.notification.id)
-          .get()
-          .then((snapshot) {
-        if (snapshot.docs.isNotEmpty) {
-          snapshot.docs.first.reference.update({
-            'isAccepted': true,
-            'isRead': true,
-          });
-        }
-      });
+      final triggerUserId = widget.notification.triggerUserId;
+      if (triggerUserId == null || triggerUserId.isEmpty) {
+        throw Exception('Invalid trigger user ID');
+      }
 
-      // 2. Add each user to the other's connections collection
-      // Add the requester to current user's connections
-      /*await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUserId)
-          .collection('connections')
-          .doc(widget.notification.triggerUserId)
-          .set({
-        'userId': widget.notification.triggerUserId,
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      // Add current user to requester's connections
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.notification.triggerUserId)
-          .collection('connections')
-          .doc(currentUserId)
-          .set({
-        'userId': currentUserId,
-        'timestamp': FieldValue.serverTimestamp(),
-      });*/
-
-      DocumentReference userDoc1 =
-          FirebaseFirestore.instance.collection('users').doc(currentUserId);
-
-      await userDoc1.update({
-        'addedUsers': FieldValue.arrayUnion([widget.notification.triggerUserId])
-      });
-
-      DocumentReference userDoc2 = FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.notification.triggerUserId);
-
-      await userDoc2.update({
-        'addedUsers': FieldValue.arrayUnion([currentUserId])
-      });
-
-      // 3. Notify the notification cubit of the change
-      context
-          .read<NotificationCubit>()
-          .acceptConnectRequest(widget.notification.id);
-
-      // 4. Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'Connection with ${widget.notification.triggerUserName} accepted'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      // Handle errors
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to accept connection: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
+      // Do the backend processing silently
+      try {
+        // 1. Update the notification status to accepted
+        await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('id', isEqualTo: widget.notification.id)
+            .get()
+            .then((snapshot) {
+          if (snapshot.docs.isNotEmpty) {
+            snapshot.docs.first.reference.update({
+              'isAccepted': true,
+              'isRead': true,
+            });
+          }
         });
+
+        // 2. Update current user's addedUsers array
+        DocumentReference userDoc1 =
+            FirebaseFirestore.instance.collection('users').doc(currentUserId);
+
+        await userDoc1.update({
+          'addedUsers': FieldValue.arrayUnion([triggerUserId])
+        });
+
+        // 3. Update trigger user's addedUsers array
+        DocumentReference userDoc2 =
+            FirebaseFirestore.instance.collection('users').doc(triggerUserId);
+
+        await userDoc2.update({
+          'addedUsers': FieldValue.arrayUnion([currentUserId])
+        });
+
+        // Show success snackbar
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                  'Connection with ${widget.notification.triggerUserName} accepted'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        // Just log the error, don't change UI state back
+        print('Error in backend operations: $e');
+      }
+    } catch (e) {
+      // This should only happen if we can't get the current user ID
+      setState(() {
+        _locallyAccepted = false;
+        _isProcessing = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to accept connection: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -157,42 +158,50 @@ class _NotificationTileState extends State<NotificationTile> {
     });
 
     try {
-      // 1. Update the notification status
-      await FirebaseFirestore.instance
-          .collection('notifications')
-          .where('id', isEqualTo: widget.notification.id)
-          .get()
-          .then((snapshot) {
-        if (snapshot.docs.isNotEmpty) {
-          snapshot.docs.first.reference.delete();
-        }
+      // 1. Update the UI immediately
+      setState(() {
+        _isProcessing = false;
       });
 
-      // 2. Notify the notification cubit of the change
-      context.read<NotificationCubit>().rejectConnectRequest(
-            widget.notification.id,
-          );
-
-      // 3. Show a message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Connection request rejected'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    } catch (e) {
-      // Handle errors
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to reject connection: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
+      // 2. Process backend operations
+      try {
+        // Delete the notification from Firestore
+        await FirebaseFirestore.instance
+            .collection('notifications')
+            .where('id', isEqualTo: widget.notification.id)
+            .get()
+            .then((snapshot) {
+          if (snapshot.docs.isNotEmpty) {
+            snapshot.docs.first.reference.delete();
+          }
         });
+
+        // Show rejection message if still mounted
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Connection request rejected'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      } catch (e) {
+        // Just log the error, UI is already updated
+        print('Error in backend rejection: $e');
+      }
+    } catch (e) {
+      // This is for critical errors before UI update
+      setState(() {
+        _isProcessing = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to reject connection: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -272,7 +281,8 @@ class _NotificationTileState extends State<NotificationTile> {
                   // Connection request actions - only show for connection requests (type 1)
                   // and only if not already accepted
                   if (widget.notification.type == 1 &&
-                      !widget.notification.isAccepted)
+                      !widget.notification.isAccepted &&
+                      !_locallyAccepted)
                     Container(
                       margin: const EdgeInsets.only(top: 12, left: 40),
                       child: _isProcessing
@@ -324,7 +334,7 @@ class _NotificationTileState extends State<NotificationTile> {
 
                   // Show "Accepted" label for already accepted connection requests
                   if (widget.notification.type == 1 &&
-                      widget.notification.isAccepted)
+                      (widget.notification.isAccepted || _locallyAccepted))
                     Container(
                       margin: const EdgeInsets.only(top: 8, left: 40),
                       padding: const EdgeInsets.symmetric(

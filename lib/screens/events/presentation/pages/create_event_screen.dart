@@ -256,7 +256,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   if (value.isNotEmpty) {
                     setState(() => _maxSlots = int.tryParse(value));
                   } else {
-                    setState(() => _maxSlots = null);
+                    setState(() => _maxSlots);
                   }
                 },
               ),

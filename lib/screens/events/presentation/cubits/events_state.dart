@@ -12,6 +12,8 @@ class EventsLoading extends EventsState {}
 
 class EventCreated extends EventsState {}
 
+class EventUpdated extends EventsState {}
+
 class EventJoined extends EventsState {}
 
 class EventsLoaded extends EventsState {

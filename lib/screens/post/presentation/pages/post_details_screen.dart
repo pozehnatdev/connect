@@ -138,21 +138,25 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     if (currentUser == null) return;
 
     final text = commentTextController.text.trim();
-
     if (text.isEmpty || currentUser!.first_name == null) return;
 
     final newComment = Comment(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        postId: widget.post.id,
-        userId: currentUser!.id ?? '',
-        userName: "${currentUser!.first_name!} ${currentUser?.last_name ?? ''}",
-        text: text,
-        timeStamp: DateTime.now());
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      postId: widget.post.id,
+      userId: currentUser!.id ?? '',
+      userName: "${currentUser!.first_name!} ${currentUser?.last_name ?? ''}",
+      text: text,
+      timeStamp: DateTime.now(),
+    );
 
     context.read<PostCubit>().addComment(widget.post.id, newComment);
-    commentTextController.clear();
 
-    // Scroll to bottom after adding comment
+    setState(() {
+      widget.post.comments.add(newComment); // ✅ Add the comment locally
+      commentTextController.clear();
+    });
+
+    // Scroll to bottom after a short delay
     Future.delayed(Duration(milliseconds: 300), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(

@@ -73,8 +73,9 @@ class EventsCubit extends Cubit<EventsState> {
       }
 
       // Create a copy of the event with the host ID
-      final eventWithHost = event.copyWith(hostId: userId);
-
+      late Event eventWithHost = event.copyWith(hostId: userId);
+      eventWithHost.attendees.add(userId);
+      ;
       // Save to Firestore
       await _firestore
           .collection('events')
@@ -89,6 +90,36 @@ class EventsCubit extends Cubit<EventsState> {
     } catch (e) {
       print('Error creating event: $e');
       emit(EventsError('Failed to create event: $e'));
+    }
+  }
+
+  Future<void> updateEvent(Event event) async {
+    try {
+      emit(EventsLoading());
+
+      // Set the host ID to current user
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Create a copy of the event with the host ID
+      final eventWithHost = event.copyWith(hostId: userId);
+
+      // Save to Firestore
+      await _firestore
+          .collection('events')
+          .doc(eventWithHost.id)
+          .set(eventWithHost.toJson());
+      print('Event updated successfully: ${eventWithHost.id}');
+
+      // Emit success state
+      emit(EventUpdated());
+
+      // Note: We don't need to fetch events here as the stream will update automatically
+    } catch (e) {
+      print('Error updating event: $e');
+      emit(EventsError('Failed to update event: $e'));
     }
   }
 

@@ -177,13 +177,35 @@ class _PostTileState extends State<PostTile> {
     final newcomment = Comment(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         postId: widget.post.id,
-        userId: widget.post.userid,
+        userId: currentUser!.id!, // Use current user's ID, not post owner's ID
         userName:
             currentUser!.first_name! + " " + (currentUser?.last_name ?? ''),
         text: text,
         timeStamp: DateTime.now());
 
-    context.read<PostCubit>().addComment(widget.post.id, newcomment);
+    // Update local state first
+    setState(() {
+      widget.post.comments.add(newcomment);
+      showComments = true; // Make sure comments are visible
+    });
+
+    // Then update Firestore
+    context
+        .read<PostCubit>()
+        .addComment(widget.post.id, newcomment)
+        .catchError((error) {
+      // If there's an error, revert the local state change
+      setState(() {
+        widget.post.comments
+            .removeWhere((comment) => comment.id == newcomment.id);
+      });
+
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add comment: ${error.toString()}')),
+      );
+    });
+
     CommentTextController.clear();
   }
 

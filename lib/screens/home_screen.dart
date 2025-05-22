@@ -319,7 +319,28 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
                           color: linkedInCardBackground,
                           child: PostTile(
                             post: post,
-                            onDeletePressed: () => deletePost(post.id),
+                            onDeletePressed: () => showDialog(
+                                context: context,
+                                builder: (context) {
+                                  return AlertDialog(
+                                    title: Text('Delete Post'),
+                                    content: Text(
+                                        'Are you sure you want to delete this post?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          deletePost(post.id);
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text('Delete'),
+                                      ),
+                                    ],
+                                  );
+                                }),
                           ),
                         ),
                       );

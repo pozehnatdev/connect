@@ -45,6 +45,11 @@ class Chatservice {
         .doc(chatRoomID)
         .collection("messages")
         .add(newMessagee.toMap());
+
+    FirebaseFirestore.instance
+        .collection("chat_rooms")
+        .doc(chatRoomID)
+        .set({"new_msg": true, "sender_uid": currentUserUID});
   }
   //Get messages
 

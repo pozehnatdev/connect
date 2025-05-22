@@ -64,9 +64,13 @@ class NotificationCubit extends Cubit<NotificationState> {
     String notificationId,
   ) async {
     try {
-      await notificationRepo.acceptConnectRequest(notificationId);
-      // After accepting the request, refresh the notifications
+      // First, get the current state to check if we have loaded notifications
       final currentState = state;
+
+      // Make the API call to accept the connection request
+      await notificationRepo.acceptConnectRequest(notificationId);
+
+      // After accepting the request, update the notification in our state
       if (currentState is NotificationsLoaded) {
         final updatedNotifications =
             currentState.notifications.map((notification) {
@@ -91,6 +95,8 @@ class NotificationCubit extends Cubit<NotificationState> {
       }
     } catch (e) {
       emit(NotificationError("Error accepting connect request: $e"));
+      // Re-throw the error so the UI can handle it appropriately
+      rethrow;
     }
   }
 
@@ -107,6 +113,8 @@ class NotificationCubit extends Cubit<NotificationState> {
       }
     } catch (e) {
       emit(NotificationError("Error rejecting connect request: $e"));
+      // Re-throw the error so the UI can handle it appropriately
+      rethrow;
     }
   }
 
@@ -123,7 +131,7 @@ class NotificationCubit extends Cubit<NotificationState> {
             id: notification.id,
             userId: notification.userId,
             triggerUserId: notification.triggerUserId,
-            triggerUserName: notification!.triggerUserName,
+            triggerUserName: notification.triggerUserName,
             // postId: notification.postId,
             isAccepted: notification.isAccepted,
             type: notification.type,
