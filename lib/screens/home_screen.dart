@@ -135,6 +135,17 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
   late final postCubit = context.read<PostCubit>();
   final ScrollController _scrollController = ScrollController();
 
+  Future<String?> getUserImageUrl() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    return doc['imageUrl'];
+  }
+
   // LinkedIn color scheme
   final Color linkedInBlue = Color(0xFF0A66C2);
   final Color linkedInBackground = Color(0xFFF3F2EF);
@@ -248,9 +259,18 @@ class _HomeFeedScreenState extends State<HomeFeedScreen> {
             ),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: Colors.grey[300],
-                  child: Icon(Icons.person, color: Colors.grey[600]),
+                FutureBuilder<String?>(
+                  future: getUserImageUrl(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return CircularProgressIndicator();
+                    }
+                    final url = snapshot.data;
+                    return CircleAvatar(
+                      backgroundImage: url != null ? NetworkImage(url) : null,
+                      child: url == null ? Icon(Icons.person) : null,
+                    );
+                  },
                 ),
                 SizedBox(width: 12),
                 Expanded(

@@ -1,8 +1,17 @@
+import 'dart:io';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectapp/model/user/user_model.dart';
+import 'package:connectapp/screens/profile/add_education.dart';
+import 'package:connectapp/screens/profile/add_profession.dart';
 import 'package:connectapp/screens/profile/edit_education.dart';
+import 'package:connectapp/screens/profile/edit_interest.dart';
 import 'package:connectapp/screens/profile/edit_profesion.dart';
 import 'package:connectapp/screens/profile/user_profile.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileEditPage extends StatefulWidget {
   final Userr user;
@@ -30,25 +39,34 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   late TextEditingController pincodeController;
   late TextEditingController countryController;
 
+  //image url
+  late String imageUrl;
+
   // LinkedIn colors
   final Color linkedInBlue = Color(0xFF0077B5);
   final Color lightBlue = Color(0xFF0A66C2);
   final Color whiteBackground = Color(0xFFF3F2EF);
   final Color borderGrey = Color(0xFFE1E9EE);
 
+  // Add this variable to track user data updates
+  late Userr currentUser;
+
   @override
   void initState() {
     super.initState();
 
+    // Initialize current user
+    currentUser = widget.user;
+
     // Initialize controllers with existing user data
-    firstNameController = TextEditingController(text: widget.user.first_name);
-    middleNameController = TextEditingController(text: widget.user.middle_name);
-    lastNameController = TextEditingController(text: widget.user.last_name);
-    emailController = TextEditingController(text: widget.user.email);
-    phoneController = TextEditingController(text: widget.user.phone);
+    firstNameController = TextEditingController(text: currentUser.first_name);
+    middleNameController = TextEditingController(text: currentUser.middle_name);
+    lastNameController = TextEditingController(text: currentUser.last_name);
+    emailController = TextEditingController(text: currentUser.email);
+    phoneController = TextEditingController(text: currentUser.phone);
 
     // Initialize address controllers
-    final addressDetails = widget.user.address_details ?? {};
+    final addressDetails = currentUser.address_details ?? {};
     address1Controller =
         TextEditingController(text: addressDetails['address_line1'] ?? '');
     address2Controller =
@@ -62,6 +80,9 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         TextEditingController(text: addressDetails['pincode'] ?? '');
     countryController =
         TextEditingController(text: addressDetails['country'] ?? '');
+
+    // Initialize image URL
+    imageUrl = currentUser.imageUrl ?? '';
   }
 
   @override
@@ -80,6 +101,94 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     pincodeController.dispose();
     countryController.dispose();
     super.dispose();
+  }
+
+  // Add method to fetch updated user data from Firebase
+  Future<void> _refreshUserData() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.id)
+          .get();
+
+      if (doc.exists) {
+        final data = doc.data()!;
+        setState(() {
+          // Update professional details
+          if (data['proffesional_details'] != null) {
+            currentUser.proffesional_details =
+                List<Map<String, dynamic>>.from(data['proffesional_details']);
+          }
+
+          // Update educational details
+          if (data['educational_details'] != null) {
+            currentUser.educational_details =
+                List<Map<String, dynamic>>.from(data['educational_details']);
+          }
+
+          // Update image URL if changed
+          if (data['imageUrl'] != null) {
+            currentUser.imageUrl = data['imageUrl'];
+            imageUrl = data['imageUrl'];
+          }
+        });
+      }
+    } catch (e) {
+      print('Error refreshing user data: $e');
+    }
+  }
+
+  Future<File?> pickImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      return File(pickedFile.path);
+    } else {
+      return null;
+    }
+  }
+
+  Future<String?> uploadProfilePicture(File imageFile) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_pictures/${user.uid}.jpg');
+
+      final uploadTask = await storageRef.putFile(imageFile);
+
+      // Get the download URL after upload
+      final downloadUrl = await storageRef.getDownloadURL();
+      return downloadUrl;
+    } catch (e) {
+      print("Error uploading profile picture: $e");
+      return null;
+    }
+  }
+
+  Future<void> pickAndUploadProfilePicture() async {
+    final image = await pickImage();
+    if (image == null) return;
+
+    final url = await uploadProfilePicture(image);
+    if (url != null) {
+      print("Profile picture uploaded: $url");
+
+      // Update Firebase
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.id)
+          .update({'imageUrl': url});
+
+      // Update local state
+      setState(() {
+        imageUrl = url;
+        currentUser.imageUrl = url;
+      });
+    }
   }
 
   @override
@@ -118,7 +227,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildProfileImageSection(),
+            _buildProfileImageSection(
+              imageUrl: currentUser.imageUrl,
+              onTap: pickAndUploadProfilePicture,
+            ),
             const SizedBox(height: 16),
             _buildPersonalInfoSection(),
             const SizedBox(height: 16),
@@ -128,13 +240,18 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             const SizedBox(height: 16),
             _buildEducationSection(),
             const SizedBox(height: 24),
+            _buildInterestSection(),
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProfileImageSection() {
+  Widget _buildProfileImageSection({
+    required String? imageUrl,
+    required VoidCallback onTap,
+  }) {
     return Container(
       color: Colors.white,
       padding: EdgeInsets.all(16),
@@ -150,37 +267,43 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 4),
                   color: Colors.grey[300],
-                  image: widget.user.imageUrl != null
+                  image: imageUrl != null
                       ? DecorationImage(
-                          image: NetworkImage(widget.user.imageUrl!),
+                          image: NetworkImage(imageUrl),
                           fit: BoxFit.cover,
                         )
                       : null,
                 ),
-                child: widget.user.imageUrl == null
+                child: imageUrl == null
                     ? Icon(Icons.person, size: 60, color: Colors.grey[600])
                     : null,
               ),
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: linkedInBlue,
-                ),
-                child: Icon(
-                  Icons.camera_alt,
-                  color: Colors.white,
-                  size: 20,
+              GestureDetector(
+                onTap: onTap,
+                child: Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: linkedInBlue,
+                  ),
+                  child: Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ],
           ),
           SizedBox(height: 12),
-          Text(
-            'Change Profile Photo',
-            style: TextStyle(
-              color: linkedInBlue,
-              fontWeight: FontWeight.bold,
+          GestureDetector(
+            onTap: onTap,
+            child: Text(
+              'Change Profile Photo',
+              style: TextStyle(
+                color: linkedInBlue,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -263,8 +386,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 
   Widget _buildProfessionalSection() {
-    if (widget.user.proffesional_details == null ||
-        widget.user.proffesional_details!.isEmpty) {
+    if (currentUser.proffesional_details == null ||
+        currentUser.proffesional_details!.isEmpty) {
       return _buildAddNewSection(
           'Add Professional Experience', Icons.work_outline);
     }
@@ -293,19 +416,21 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               ),
               IconButton(
                 icon: Icon(Icons.edit, color: linkedInBlue),
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EditProfesion(user: widget.user),
+                      builder: (context) => EditProfesion(user: currentUser),
                     ),
                   );
+                  // Refresh data when returning from edit screen
+                  await _refreshUserData();
                 },
               ),
             ],
           ),
           SizedBox(height: 16),
-          ...widget.user.proffesional_details!
+          ...currentUser.proffesional_details!
               .map((exp) => _buildExperienceEditItem(exp))
               .toList(),
         ],
@@ -362,8 +487,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 
   Widget _buildEducationSection() {
-    if (widget.user.educational_details == null ||
-        widget.user.educational_details!.isEmpty) {
+    if (currentUser.educational_details == null ||
+        currentUser.educational_details!.isEmpty) {
       return _buildAddNewSection('Add Education', Icons.school_outlined);
     }
 
@@ -391,19 +516,21 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               ),
               IconButton(
                 icon: Icon(Icons.edit, color: linkedInBlue),
-                onPressed: () {
-                  Navigator.push(
+                onPressed: () async {
+                  await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => EditEducation(user: widget.user),
+                      builder: (context) => EditEducation(user: currentUser),
                     ),
                   );
+                  // Refresh data when returning from edit screen
+                  await _refreshUserData();
                 },
               ),
             ],
           ),
           SizedBox(height: 16),
-          ...widget.user.educational_details!
+          ...currentUser.educational_details!
               .map((edu) => _buildEducationEditItem(edu))
               .toList(),
         ],
@@ -460,7 +587,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
   }
 
-  Widget _buildAddNewSection(String title, IconData icon) {
+  // Add this to the existing edit_profile.dart
+  Widget _buildInterestSection() {
+    final interests = currentUser.interests ?? [];
+
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(16),
@@ -469,19 +599,104 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         border: Border.all(color: borderGrey),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: linkedInBlue, size: 24),
-          SizedBox(width: 12),
-          Text(
-            title,
-            style: TextStyle(
-              color: linkedInBlue,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Interests',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.edit, color: linkedInBlue),
+                onPressed: () async {
+                  final updatedInterests = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          EditInterestsScreen(user: currentUser),
+                    ),
+                  );
+                  if (updatedInterests != null) {
+                    setState(() {
+                      currentUser.interests = updatedInterests;
+                    });
+                  }
+                },
+              ),
+            ],
           ),
+          if (interests.isNotEmpty) ...[
+            SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: interests
+                  .map((interest) => Chip(
+                        label: Text(interest),
+                        backgroundColor: linkedInBlue.withOpacity(0.1),
+                      ))
+                  .toList(),
+            ),
+          ],
         ],
+      ),
+    );
+  }
+
+// Add this widget to the main Column in build()
+
+  Widget _buildAddNewSection(String title, IconData icon) {
+    return GestureDetector(
+      onTap: title == 'Add Professional Experience'
+          ? () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddProfesion(user: currentUser),
+                ),
+              );
+              // Refresh data when returning from add screen
+              await _refreshUserData();
+            }
+          : () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddEducation(user: currentUser),
+                ),
+              );
+              // Refresh data when returning from add screen
+              await _refreshUserData();
+            },
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: borderGrey),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: linkedInBlue, size: 24),
+            SizedBox(width: 12),
+            Text(
+              title,
+              style: TextStyle(
+                color: linkedInBlue,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -512,15 +727,17 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   }
 
   void _saveProfile() {
+    //image url
+    currentUser.imageUrl = imageUrl;
     // Update user object with new values
-    widget.user.first_name = firstNameController.text;
-    widget.user.middle_name = middleNameController.text;
-    widget.user.last_name = lastNameController.text;
-    widget.user.email = emailController.text;
-    widget.user.phone = phoneController.text;
+    currentUser.first_name = firstNameController.text;
+    currentUser.middle_name = middleNameController.text;
+    currentUser.last_name = lastNameController.text;
+    currentUser.email = emailController.text;
+    currentUser.phone = phoneController.text;
 
     // Update address details
-    widget.user.address_details = {
+    currentUser.address_details = {
       "address_line1": address1Controller.text,
       "address_line2": address2Controller.text,
       "address_line3": address3Controller.text,
@@ -541,6 +758,6 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
     );
 
     // Navigate back to profile page with updated user data
-    Navigator.pop(context);
+    Navigator.pop(context, currentUser);
   }
 }

@@ -1,18 +1,45 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectapp/screens/profile/edit_profile.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:connectapp/model/user/user_model.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   final Userr user;
+
+  ProfilePage({required this.user});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  Future<String?> getUserImageUrl() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return null;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    return doc['imageUrl'];
+  }
+
+  late Userr currentUser;
+
+  void initState() {
+    super.initState();
+    currentUser = widget.user;
+  }
 
   // LinkedIn colors from your onboarding screen
   final Color linkedInBlue = Color(0xFF0077B5);
-  final Color lightBlue = Color(0xFF0A66C2);
-  final Color whiteBackground = Color(0xFFF3F2EF);
-  final Color borderGrey = Color(0xFFE1E9EE);
 
-  ProfilePage({required this.user});
+  final Color lightBlue = Color(0xFF0A66C2);
+
+  final Color whiteBackground = Color(0xFFF3F2EF);
+
+  final Color borderGrey = Color(0xFFE1E9EE);
 
   @override
   Widget build(BuildContext context) {
@@ -36,16 +63,21 @@ class ProfilePage extends StatelessWidget {
           ],
         ),
         actions: [
-          if (user.id == FirebaseAuth.instance.currentUser?.uid)
+          if (currentUser.id == FirebaseAuth.instance.currentUser?.uid)
             IconButton(
               icon: Icon(Icons.edit, color: linkedInBlue),
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                final updatedUser = await Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => ProfileEditPage(user: user),
+                    builder: (context) => ProfileEditPage(user: currentUser),
                   ),
                 );
+                if (updatedUser != null) {
+                  setState(() {
+                    currentUser = updatedUser;
+                  });
+                }
               },
             ),
         ],
@@ -108,14 +140,14 @@ class ProfilePage extends StatelessWidget {
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 4),
                     color: Colors.grey[300],
-                    image: user.imageUrl != null
+                    image: NetworkImage(currentUser.imageUrl!) != null
                         ? DecorationImage(
-                            image: NetworkImage(user.imageUrl!),
+                            image: NetworkImage(currentUser.imageUrl!),
                             fit: BoxFit.cover,
                           )
                         : null,
                   ),
-                  child: user.imageUrl == null
+                  child: currentUser.imageUrl == null
                       ? Icon(Icons.person, size: 60, color: Colors.grey[600])
                       : null,
                 ),
@@ -132,21 +164,22 @@ class ProfilePage extends StatelessWidget {
                           color: Colors.grey[800],
                         ),
                       ),
-                      if (user.proffesional_details != null &&
-                          user.proffesional_details!.isNotEmpty &&
-                          user.proffesional_details![0]['title'] != null)
+                      if (currentUser.proffesional_details != null &&
+                          currentUser.proffesional_details!.isNotEmpty &&
+                          currentUser.proffesional_details![0]['title'] != null)
                         Text(
-                          user.proffesional_details![0]['title'],
+                          currentUser.proffesional_details![0]['title'],
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey[700],
                           ),
                         ),
-                      if (user.proffesional_details != null &&
-                          user.proffesional_details!.isNotEmpty &&
-                          user.proffesional_details![0]['company'] != null)
+                      if (currentUser.proffesional_details != null &&
+                          currentUser.proffesional_details!.isNotEmpty &&
+                          currentUser.proffesional_details![0]['company'] !=
+                              null)
                         Text(
-                          user.proffesional_details![0]['company'],
+                          currentUser.proffesional_details![0]['company'],
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -219,16 +252,16 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _buildInfoItem(Icons.email_outlined, 'Email', user.email),
-          _buildInfoItem(Icons.phone_outlined, 'Phone', user.phone),
+          _buildInfoItem(Icons.email_outlined, 'Email', currentUser.email),
+          _buildInfoItem(Icons.phone_outlined, 'Phone', currentUser.phone),
         ],
       ),
     );
   }
 
   Widget _buildProfessionalSection() {
-    if (user.proffesional_details == null ||
-        user.proffesional_details!.isEmpty) {
+    if (currentUser.proffesional_details == null ||
+        currentUser.proffesional_details!.isEmpty) {
       return SizedBox.shrink();
     }
 
@@ -252,7 +285,7 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          ...user.proffesional_details!
+          ...currentUser.proffesional_details!
               .map((exp) => _buildExperienceItem(exp))
               .toList(),
         ],
@@ -369,7 +402,8 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildEducationSection() {
-    if (user.educational_details == null || user.educational_details!.isEmpty) {
+    if (currentUser.educational_details == null ||
+        currentUser.educational_details!.isEmpty) {
       return SizedBox.shrink();
     }
 
@@ -393,7 +427,7 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          ...user.educational_details!
+          ...currentUser.educational_details!
               .map((edu) => _buildEducationItem(edu))
               .toList(),
         ],
@@ -502,7 +536,7 @@ class ProfilePage extends StatelessWidget {
     List<String>? interestsList;
 
     try {
-      interestsList = user.interests;
+      interestsList = currentUser.interests;
       print(interestsList?.length ?? "");
     } catch (e) {
       // Interests property doesn't exist in this way
@@ -579,11 +613,11 @@ class ProfilePage extends StatelessWidget {
   }
 
   Widget _buildLocationSection() {
-    if (user.address_details == null) {
+    if (currentUser.address_details == null) {
       return SizedBox.shrink();
     }
 
-    final address = user.address_details!;
+    final address = currentUser.address_details!;
     final city = address['city'] ?? '';
     final state = address['state'] ?? '';
     final country = address['country'] ?? '';
@@ -636,12 +670,13 @@ class ProfilePage extends StatelessWidget {
   }
 
   String _getFullName() {
-    String name = user.first_name ?? '';
-    if (user.middle_name != null && user.middle_name!.isNotEmpty) {
-      name += ' ${user.middle_name}';
+    String name = currentUser.first_name ?? '';
+    if (currentUser.middle_name != null &&
+        currentUser.middle_name!.isNotEmpty) {
+      name += ' ${currentUser.middle_name}';
     }
-    if (user.last_name != null && user.last_name!.isNotEmpty) {
-      name += ' ${user.last_name}';
+    if (currentUser.last_name != null && currentUser.last_name!.isNotEmpty) {
+      name += ' ${currentUser.last_name}';
     }
     return name;
   }

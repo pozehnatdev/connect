@@ -59,6 +59,15 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     }
   }
 
+  Future<String?> getUserImageUrl() async {
+    final userid = widget.post.userid;
+    if (userid == null) return null;
+
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(userid).get();
+    return doc['imageUrl'];
+  }
+
   String customTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -250,35 +259,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
                       // Post header
                       Row(
                         children: [
-                          CircleAvatar(
-                            child: ClipOval(
-                              child: FadeInImage(
-                                placeholder: AssetImage('assets/img.png'),
-                                image: AssetImage(
-                                    'assets/${widget.post.userName}.png'),
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
-                                imageErrorBuilder:
-                                    (context, error, stackTrace) {
-                                  return Image.asset(
-                                    'assets/${widget.post.userName}.jpg',
-                                    fit: BoxFit.cover,
-                                    width: double.infinity,
-                                    height: double.infinity,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Image.asset(
-                                        'assets/default_profile.jpg',
-                                        fit: BoxFit.cover,
-                                        width: double.infinity,
-                                        height: double.infinity,
-                                      );
-                                    },
-                                  );
-                                },
-                              ),
-                            ),
-                            backgroundColor: Colors.transparent,
+                          FutureBuilder<String?>(
+                            future: getUserImageUrl(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return CircularProgressIndicator();
+                              }
+                              final url = snapshot.data;
+                              return CircleAvatar(
+                                backgroundImage:
+                                    url != null ? NetworkImage(url) : null,
+                                child: url == null ? Icon(Icons.person) : null,
+                              );
+                            },
                           ),
                           SizedBox(width: 12),
                           Expanded(

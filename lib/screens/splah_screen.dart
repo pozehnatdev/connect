@@ -1,8 +1,8 @@
-import 'package:connectapp/screens/signInScreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:connectapp/services/auth_provider.dart';
 import 'package:connectapp/screens/home_screen.dart';
+import 'package:connectapp/screens/signInScreen.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -10,11 +10,13 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  bool _navigated = false;
+
   @override
   void initState() {
     super.initState();
-    // Check auth state and navigate accordingly
     Future.delayed(Duration(seconds: 8), () {
+      if (!mounted || _navigated) return;
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       if (!authProvider.isLoading) {
         _navigateToNextScreen();
@@ -27,11 +29,9 @@ class _SplashScreenState extends State<SplashScreen> {
     return Scaffold(
       body: Consumer<AuthProvider>(
         builder: (context, authProvider, _) {
-          // Listen for auth state changes
           if (!authProvider.isLoading) {
-            // Delayed navigation to prevent multiple navigations
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              _navigateToNextScreen();
+              if (!_navigated && mounted) _navigateToNextScreen();
             });
           }
 
@@ -39,7 +39,6 @@ class _SplashScreenState extends State<SplashScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // App logo
                 Icon(
                   Icons.connect_without_contact,
                   size: 100,
@@ -64,15 +63,14 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   void _navigateToNextScreen() {
+    if (!mounted || _navigated) return;
+    _navigated = true;
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    if (authProvider.isSignedIn) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => HomePage()),
-      );
-    } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => SignInScreen()),
-      );
-    }
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => authProvider.isSignedIn ? HomePage() : SignInScreen(),
+      ),
+    );
   }
 }

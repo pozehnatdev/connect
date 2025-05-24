@@ -1,9 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:connectapp/screens/onboarding/onboarding_main.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectapp/services/auth_provider.dart';
 import 'package:connectapp/screens/home_screen.dart';
+import 'package:connectapp/screens/onboarding/onboarding_main.dart';
 
 class SignInScreen extends StatelessWidget {
   @override
@@ -27,7 +27,6 @@ class SignInScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // App logo
                   Icon(
                     Icons.connect_without_contact,
                     size: 100,
@@ -60,17 +59,20 @@ class SignInScreen extends StatelessWidget {
                               final success =
                                   await authProvider.signInWithGoogle();
 
-                              String userId = authProvider.user?.uid ?? '';
+                              if (!context.mounted) return;
+
                               if (success) {
-                                // Check if user exists in Firestore
+                                String userId = authProvider.user?.uid ?? '';
+
                                 DocumentSnapshot userDoc =
                                     await FirebaseFirestore.instance
                                         .collection('users')
                                         .doc(userId)
                                         .get();
 
+                                if (!context.mounted) return;
+
                                 if (!userDoc.exists) {
-                                  // User does not exist, navigate to onboarding screen
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
@@ -78,7 +80,6 @@ class SignInScreen extends StatelessWidget {
                                     ),
                                   );
                                 } else {
-                                  // User exists, navigate to home screen
                                   Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
@@ -86,6 +87,13 @@ class SignInScreen extends StatelessWidget {
                                     ),
                                   );
                                 }
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        'Google Sign-In failed. Please try again.'),
+                                  ),
+                                );
                               }
                             },
                       style: ElevatedButton.styleFrom(

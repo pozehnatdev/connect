@@ -584,6 +584,17 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
     String? currentPosition;
     String? currentCompany;
 
+    Future<String?> getUserImageUrl() async {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      return doc['imageUrl'];
+    }
+
     if (user.proffesional_details != null &&
         user.proffesional_details!.isNotEmpty) {
       // Filter out null or empty values
@@ -663,28 +674,18 @@ class _UserSearchScreenState extends State<UserSearchScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Profile image
-              Hero(
-                tag: 'profile-${user.id}',
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.grey[300],
-                    image: (user.imageUrl != null && user.imageUrl!.isNotEmpty)
-                        ? DecorationImage(
-                            image: NetworkImage(user.imageUrl!),
-                            fit: BoxFit.cover,
-                            onError: (exception, stackTrace) {
-                              // Handle image loading error silently
-                            },
-                          )
-                        : null,
-                  ),
-                  child: (user.imageUrl == null || user.imageUrl!.isEmpty)
-                      ? Icon(Icons.person, size: 36, color: Colors.grey[600])
-                      : null,
-                ),
+              FutureBuilder<String?>(
+                future: getUserImageUrl(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  }
+                  final url = snapshot.data;
+                  return CircleAvatar(
+                    backgroundImage: url != null ? NetworkImage(url) : null,
+                    child: url == null ? Icon(Icons.person) : null,
+                  );
+                },
               ),
               const SizedBox(width: 16),
 
