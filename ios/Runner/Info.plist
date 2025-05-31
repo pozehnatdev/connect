@@ -45,5 +45,18 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Add this block for Google Sign-In -->
+	<key>CFBundleURLTypes</key>
+	<array>
+	  <dict>
+	    <key>CFBundleTypeRole</key>
+	    <string>Editor</string>
+	    <key>CFBundleURLSchemes</key>
+	    <array>
+	      <string>com.googleusercontent.apps.119153274000-i1h5pgtrb2bifkrnthq9vqgc1qlauutr</string>
+	    </array>
+	  </dict>
+	</array>
 </dict>
 </plist>
